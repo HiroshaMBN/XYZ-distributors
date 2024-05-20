@@ -49,7 +49,7 @@ int database_administration()
                 // Loop until a valid quantity is entered
                 while (1)
                 {
-                    printf("Enter quantity: ");
+                    // printf("Enter quantity: ");
                     if (scanf("%d", &qty) != 1)
                     {
                         printf("Please enter a valid number.\n");
@@ -65,7 +65,7 @@ int database_administration()
 
                 while (1)
                 {
-                    printf("Enter unit price: ");
+                    // printf("Enter unit price: ");
                     if (scanf("%lf", &unit_price) != 1)
                     {
                         printf("Please enter a valid number.\n");
@@ -79,12 +79,12 @@ int database_administration()
                     }
                 }
 
-                total_price = qty * unit_price;
+                // total_price = qty * unit_price;
 
                 // Constructing SQL query string with user input values
                 char query[256];
                 // fgets(item_name, sizeof(item_name), stdin);
-                sprintf(query, "INSERT INTO item (item_name, qty, unit_price, total_price) VALUES ('%s', '%d', '%lf', '%lf')", item_name, qty, unit_price, total_price);
+                sprintf(query, "INSERT INTO item (item_name, qty, unit_price) VALUES ('%s', '%d', '%lf')", item_name, qty, unit_price);
 
                 // Executing SQL query
                 if (mysql_query(conn, query) != 0)
@@ -100,20 +100,22 @@ int database_administration()
             else if (choice_item == 2)
             {
                 int search_method;
-                char item_name;
-                char item_id;
+
+                char item_id[100];
                 char query[256];
+                char item_name[100];
                 sprintf(query, "SELECT * FROM item ");
 
                 printf(" [1] Item search by name\n");
                 printf(" [2] Item search by id\n");
+                printf(" [3] Show all items\n");
                 scanf("%d", &search_method);
 
                 if (search_method == 1)
                 {
                     printf("Please enter item name: ");
-                    scanf("%s", &item_name);
-                    sprintf(query, "SELECT * FROM `item` WHERE item_name like '%%soft%%'");
+                    scanf("%99s", item_name); // Limit input to prevent buffer overflow
+                    snprintf(query, sizeof(query), "SELECT * FROM `item` WHERE item_name LIKE '%%%s%%'", item_name);
 
                     // Execute the query
                     if (mysql_query(conn, query))
@@ -132,7 +134,7 @@ int database_administration()
                     MYSQL_FIELD *fields = mysql_fetch_fields(res);
                     for (int i = 0; i < num_fields; i++)
                     {
-                        printf("%s ", fields[i].name);
+                        printf("%-12s| ", fields[i].name);
                     }
                     printf("\n");
 
@@ -141,16 +143,83 @@ int database_administration()
                     {
                         for (int i = 0; i < num_fields; i++)
                         {
-                            printf("%s ", row[i] ? row[i] : "NULL");
+                            printf("%-12s| ", row[i] ? row[i] : "NULL");
                         }
                         printf("\n");
                     }
                 }
+                // search
                 else if (search_method == 2)
                 {
                     printf("Please enter item ID\n");
-                    scanf("%s", item_id);
-                    // printf(item_id);
+                    scanf("%99s", item_id); // Limit input to prevent buffer overflow
+                    snprintf(query, sizeof(query), "SELECT * FROM `item` WHERE id LIKE '%%%s%%'", item_id);
+
+                    // Execute the query
+                    if (mysql_query(conn, query))
+                    {
+                        fprintf(stderr, "%s\n", mysql_error(conn));
+                        // exit(1);
+                    }
+
+                    // Store the result
+                    res = mysql_store_result(conn);
+
+                    // Get the number of fields
+                    int num_fields = mysql_num_fields(res);
+
+                    // Fetch and print column headers
+                    MYSQL_FIELD *fields = mysql_fetch_fields(res);
+                    for (int i = 0; i < num_fields; i++)
+                    {
+                        printf("%-12s| ", fields[i].name);
+                    }
+                    printf("\n");
+
+                    // Fetch and print the result rows
+                    while ((row = mysql_fetch_row(res)))
+                    {
+                        for (int i = 0; i < num_fields; i++)
+                        {
+                            printf("%-12s| ", row[i] ? row[i] : "NULL");
+                        }
+                        printf("\n");
+                    }
+                }
+                else if (search_method == 3)
+                {
+                    snprintf(query, sizeof(query), "SELECT * FROM `item` ");
+
+                    // Execute the query
+                    if (mysql_query(conn, query))
+                    {
+                        fprintf(stderr, "%s\n", mysql_error(conn));
+                        // exit(1);
+                    }
+
+                    // Store the result
+                    res = mysql_store_result(conn);
+
+                    // Get the number of fields
+                    int num_fields = mysql_num_fields(res);
+
+                    // Fetch and print column headers
+                    MYSQL_FIELD *fields = mysql_fetch_fields(res);
+                    for (int i = 0; i < num_fields; i++)
+                    {
+                        printf("%-12s| ", fields[i].name);
+                    }
+                    printf("\n");
+
+                    // Fetch and print the result rows
+                    while ((row = mysql_fetch_row(res)))
+                    {
+                        for (int i = 0; i < num_fields; i++)
+                        {
+                            printf("%-12s| ", row[i] ? row[i] : "NULL");
+                        }
+                        printf("\n");
+                    }
                 }
                 else
                 {
@@ -159,14 +228,144 @@ int database_administration()
             }
             else if (choice_item == 3)
             {
+                char query[256];
+                int id;
+                char item_name[100]; // Adjust size as needed
+                int qty;
+                double unit_price;
+                double total_price;
+                // Prompt user for item id to update
+                printf("Please enter item id: ");
+                scanf("%d", &id);
+
+                // Prompt user for new values
+                printf("Please enter new item name: ");
+                scanf("%99s", item_name); // Limit input to prevent buffer overflow
+
+                printf("Please enter new quantity: ");
+                scanf("%d", &qty);
+
+                printf("Please enter new unit price: ");
+                scanf("%lf", &unit_price);
+
+                // Calculate total_price
+                total_price = qty * unit_price;
+
+                // Format the update query
+                snprintf(query, sizeof(query),
+                         "UPDATE `item` SET item_name='%s', qty=%d, unit_price=%.2f WHERE id=%d",
+                         item_name, qty, unit_price, id);
+
+                // Execute the query
+                if (mysql_query(conn, query))
+                {
+                    fprintf(stderr, "Update query failed: %s\n", mysql_error(conn));
+                }
+                else
+                {
+                    printf("Record updated successfully.\n");
+                }
             }
             else if (choice_item == 4)
             {
+                int id;
+                char query[256];
+                printf("Please enter id of item\n");
+                scanf("%d", &id);
+                snprintf(query, sizeof(query), "Delete from `item` where id ='34'");
+
+                // Execute the query
+                if (mysql_query(conn, query))
+                {
+                    fprintf(stderr, "Delete query failed: %s\n", mysql_error(conn));
+                }
+                else
+                {
+                    printf("Record delete successfully.\n");
+                }
             }
         }
         else if (choice == 2)
         {
-            printf("**Vehicles section**\n");
+            int choice_vehicles;
+            printf("**Vehicles section**\n Please select your choice\n");
+            printf(" [1] Add vehicle\n");
+            printf(" [2] Search vehicle\n");
+            printf(" [3] Edit vehicle\n");
+            printf(" [4] Delete vehicle\n");
+            scanf("%d", &choice_vehicles);
+            // add
+            if (choice_vehicles == 1)
+            { // add
+                char query[256];
+                char reg_no[100];
+                char type[100];
+                printf("Enter vehicle registration number: ");
+                scanf("%s", &reg_no);
+                printf("Enter vehicle type : ");
+                scanf("%s", &type);
+
+                // sprintf(query, "select reg_no from vehicles where reg_no ='%%%s%%' ",reg_no);
+
+                sprintf(query, "INSERT INTO vehicles (reg_no, type) VALUES ('%s', '%s')", reg_no, type);
+
+                // Executing SQL query
+                if (mysql_query(conn, query) != 0)
+                {
+                    printf("Vehicle save failed..\n");
+                    fprintf(stderr, "mysql_query() failed: %s\n", mysql_error(conn));
+                }
+                else
+                {
+                    printf("Vehicle saved successfully..\n");
+                }
+            }
+            // search
+            else if (choice_vehicles == 2)
+            {
+                char query[256];
+                char reg_no[100];
+                printf("Please enter vehicle registration number: ");
+                scanf("%99s", &reg_no);
+                snprintf(query, sizeof(query), "SELECT * FROM `vehicles` WHERE reg_no LIKE '%%%s%%'", reg_no);
+
+                // Execute the query
+                if (mysql_query(conn, query))
+                {
+                    fprintf(stderr, "%s\n", mysql_error(conn));
+                    // exit(1);
+                }
+
+                // Store the result
+                res = mysql_store_result(conn);
+
+                // Get the number of fields
+                int num_fields = mysql_num_fields(res);
+
+                // Fetch and print column headers
+                MYSQL_FIELD *fields = mysql_fetch_fields(res);
+                for (int i = 0; i < num_fields; i++)
+                {
+                    printf("%-12s| ", fields[i].name);
+                }
+                printf("\n");
+
+                // Fetch and print the result rows
+                while ((row = mysql_fetch_row(res)))
+                {
+                    for (int i = 0; i < num_fields; i++)
+                    {
+                        printf("%-12s| ", row[i] ? row[i] : "NULL");
+                    }
+                    printf("\n");
+                }
+            }
+            else if (choice_vehicles == 3)
+            {
+            }
+            else if (choice_vehicles == 3)
+            {
+            }
         }
         else if (choice == 3)
         {
