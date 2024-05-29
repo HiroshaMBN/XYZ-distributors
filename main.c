@@ -91,6 +91,44 @@ int available_items()
         printf("\n");
     }
 }
+int loading_to_vehicle()
+{
+    char query[256];
+    printf("******************Load Table****************** \n ");
+
+    snprintf(query, sizeof(query), "SELECT * FROM `loading` ");
+
+    // Execute the query
+    if (mysql_query(conn, query))
+    {
+        fprintf(stderr, "%s\n", mysql_error(conn));
+        // exit(1);
+    }
+
+    // Store the result
+    res = mysql_store_result(conn);
+
+    // Get the number of fields
+    int num_fields = mysql_num_fields(res);
+
+    // Fetch and print column headers
+    MYSQL_FIELD *fields = mysql_fetch_fields(res);
+    for (int i = 0; i < num_fields; i++)
+    {
+        printf("%-12s| ", fields[i].name);
+    }
+    printf("\n");
+
+    // Fetch and print the result rows
+    while ((row = mysql_fetch_row(res)))
+    {
+        for (int i = 0; i < num_fields; i++)
+        {
+            printf("%-12s| ", row[i] ? row[i] : "NULL");
+        }
+        printf("\n");
+    }
+}
 int DBA()
 {
     int choice;
@@ -203,6 +241,9 @@ int DBA()
                     // sprintf(query, "INSERT INTO item (item_name, qty, unit_price) VALUES ('%s', '%d', '%lf')", item_name, qty, unit_price);
                     sprintf(query, "INSERT INTO item (supplier_id) VALUES ('%s')", sup_id);
 
+                    // UPDATE item JOIN suppliers ON item.supplier_id = suppliers.id SET item.item_name = suppliers.item_name, item.qty = suppliers.qty,
+                    //  item.unit_price = suppliers.unit_price WHERE suppliers.id = 10;
+
                     // // Executing SQL query
                     if (mysql_query(conn, query) != 0)
                     {
@@ -214,7 +255,16 @@ int DBA()
                         printf("Item saved successfully..\n");
                     }
 
-                    // printf("Item saved successfully..\n");
+                    sprintf(query, "UPDATE item JOIN suppliers ON item.supplier_id = suppliers.id SET item.item_name = suppliers.item_name, item.qty = suppliers.qty,item.unit_price = suppliers.unit_price WHERE suppliers.id = '%s'", sup_id);
+                    if (mysql_query(conn, query) != 0)
+                    {
+                        printf("Item save failed..\n");
+                        fprintf(stderr, "mysql_query() failed: %s\n", mysql_error(conn));
+                    }
+                    else
+                    {
+                        // printf("Item saved successfully..\n");
+                    }
                 }
                 else
                 {
@@ -692,10 +742,9 @@ int DBA()
 
                             if (available_qty >= qty)
                             {
-                                sprintf(query, "INSERT INTO loading (vehicle_id, item_id,qty,day_type) VALUES ('%d', '%d' , '%lf' , 'morning')", vehicle_id, item_id, qty);
+                                sprintf(query, "INSERT INTO loading (vehicle_id, item_id,qty,day_type,load_time) VALUES ('%d', '%d' , '%lf' , 'morning',current_timestamp)", vehicle_id, item_id, qty);
 
-
-// UPDATE item SET qty = (qty - 1) WHERE id = 1;
+                                // UPDATE item SET qty = (qty - 1) WHERE id = 1;
                                 if (mysql_query(conn, query) != 0)
                                 {
                                     printf("Items loading failed..\n");
@@ -706,11 +755,9 @@ int DBA()
                                     printf("Items loading to vehicle successfully..\n");
                                 }
 
-
-
                                 // sprintf(query, "UPDATE item SET qty = (qty - '%lf') WHERE id = '%d'",item_id,qty);
                                 sprintf(query, "UPDATE item SET qty = qty - %lf WHERE id = %d", qty, item_id);
-sprintf(query, "UPDATE item SET qty = qty - %lf WHERE id = %d", qty, item_id);
+                                sprintf(query, "UPDATE item SET qty = qty - %lf WHERE id = %d", qty, item_id);
 
                                 if (mysql_query(conn, query) != 0)
                                 {
@@ -721,9 +768,6 @@ sprintf(query, "UPDATE item SET qty = qty - %lf WHERE id = %d", qty, item_id);
                                 {
                                     // printf("Items loading to vehicle successfully..\n");
                                 }
-
-
-
                             }
                             else
                             {
@@ -740,7 +784,149 @@ sprintf(query, "UPDATE item SET qty = qty - %lf WHERE id = %d", qty, item_id);
             }
             else if (choice_vehicles == 6)
             {
+                int load_id;
+                int item_id;
+                double qty;
+                char query[256];
                 printf("**Item unload section**\n");
+
+                loading_to_vehicle();
+                printf("Please enter load id:\n");
+                scanf("%d", &load_id);
+                snprintf(query, sizeof(query), "SELECT COUNT(*) FROM loading WHERE id = '%d'", load_id);
+                if (mysql_query(conn, query))
+                {
+                    fprintf(stderr, "Query failed: %s\n", mysql_error(conn));
+                    // return;
+                }
+
+                MYSQL_RES *result = mysql_store_result(conn);
+                if (!result)
+                {
+                    fprintf(stderr, "Failed to store result: %s\n", mysql_error(conn));
+                    // return;
+                }
+
+                MYSQL_ROW row = mysql_fetch_row(result);
+                if (!row)
+                {
+                    fprintf(stderr, "Failed to fetch row: %s\n", mysql_error(conn));
+                    mysql_free_result(result);
+                    // return;
+                }
+                // Check if the count is greater than 0
+                int count = atoi(row[0]);
+                mysql_free_result(result);
+                if (!(count > 0))
+                {
+                    printf("WARNING!!\n load id is not matching with our records.\nPlease check load table and try again..!\n");
+                }
+                else
+                {
+
+                    // printf("**Starting inloading items to item table**\n");
+
+                    printf("Please enter quantity: ");
+                    scanf("%lf", &qty);
+                    sprintf(query, "SELECT qty , CASE WHEN qty > '2' then '1' ELSE '0' END AS message FROM loading WHERE id = '%d'", load_id);
+                    // Execute the query
+                    if (mysql_query(conn, query))
+                    {
+                        fprintf(stderr, "SELECT query failed: %s\n", mysql_error(conn));
+                        mysql_close(conn);
+                        // return;
+                    }
+
+                    // Store the result
+                    res = mysql_store_result(conn);
+                    if (res == NULL)
+                    {
+                        fprintf(stderr, "mysql_store_result() failed: %s\n", mysql_error(conn));
+                        mysql_close(conn);
+                        // return;
+                    }
+
+                    row = mysql_fetch_row(res);
+                    if (row != NULL)
+                    {
+                        double available_qty = atoi(row[0]);
+                        if (available_qty >= qty)
+                        {
+                            printf("Please enter item id: ");
+                            scanf("%d", &item_id);
+
+                            // Items validation start
+                            snprintf(query, sizeof(query), "SELECT COUNT(*) FROM loading WHERE item_id = '%d'", item_id);
+
+                            if (mysql_query(conn, query))
+                            {
+                                fprintf(stderr, "Query failed: %s\n", mysql_error(conn));
+                                // return;
+                            }
+
+                            MYSQL_RES *result = mysql_store_result(conn);
+                            if (!result)
+                            {
+                                fprintf(stderr, "Failed to store result: %s\n", mysql_error(conn));
+                                // return;
+                            }
+
+                            MYSQL_ROW row = mysql_fetch_row(result);
+                            if (!row)
+                            {
+                                fprintf(stderr, "Failed to fetch row: %s\n", mysql_error(conn));
+                                mysql_free_result(result);
+                                // return;
+                            }
+
+                            // Check if the count is greater than 0
+                            int count = atoi(row[0]);
+                            mysql_free_result(result);
+                            if (!(count > 0))
+                            {
+                                printf("WARNING!!\n Item id is not matching with our records.\nPlease check item table and try again..!\n");
+                            }
+                            else
+                            {
+                                // unload update
+
+                                sprintf(query, "UPDATE item SET qty = qty + %lf WHERE id = %d", qty, item_id);
+
+                                if (mysql_query(conn, query) != 0)
+                                {
+                                    // printf("Items loading failed..\n");
+                                    fprintf(stderr, "mysql_query() failed: %s\n", mysql_error(conn));
+                                }
+                                else
+                                {
+                                    // printf("Items loading to vehicle successfully..\n");
+                                }
+                                // current_timestamp
+                                sprintf(query, "UPDATE loading SET qty = qty - %lf , unload_time = current_timestamp WHERE id = %d AND item_id=%d", qty, load_id, item_id);
+
+                                if (mysql_query(conn, query) != 0)
+                                {
+                                    // printf("Items loading failed..\n");
+                                    fprintf(stderr, "mysql_query() failed: %s\n", mysql_error(conn));
+                                }
+                                else
+                                {
+                                    // printf("Items loading to vehicle successfully..\n");
+                                }
+
+                                // unload end
+                            }
+                        }
+                        else
+                        {
+                            printf("insufficient quantity. Please check the load table and try again\n");
+                        }
+                    }
+                    else
+                    {
+                        printf("No result found for the given load id.\n");
+                    }
+                }
             }
         } // Add purchasing
         else if (choice == 3)
@@ -778,6 +964,28 @@ sprintf(query, "UPDATE item SET qty = qty - %lf WHERE id = %d", qty, item_id);
         else if (choice == 4)
         {
             printf("**Reporting section**\n");
+            
+
+
+
+            int load_report_current_date;
+            int year_end_process;
+            int purchase_report;
+            int sales_report;
+
+           
+
+
+            //purchase_report start
+            int daily_purchase_report;
+            int monthly_purchase_report;
+            int annual_purchase_report;
+            //purchase_report end
+            //***********
+            //sales_report
+            int daily_sales_report;
+            int monthly_sales_report;
+            int annual_sales_report;
         }
         else
         {
