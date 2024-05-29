@@ -14,12 +14,60 @@ int qty;
 double unit_price;
 double total_price;
 
-int available_suppliers()
+int main_menu(){
+    conn = mysql_init(NULL);
+    int selection;
+    printf("!!!!!!!!!!!!!! ***** Welcome to XYZ Distributors ***** !!!!!!!!!!!!!!\n");
+    printf("\n");
+    printf("Please Enter your choice as number\n\n");
+    printf(" [1] Check database connectivity\n");
+    printf(" [2] Go to other activity section\n");
+
+    scanf("%d", &selection);
+
+    if (selection == 1)
+    {
+        printf("you are now interacted in database connection test section\n");
+
+        // mysql connection
+        if (conn == NULL)
+        {
+            fprintf(stderr, "mysql_init() failed\n");
+            return 1;
+        }
+
+        if (mysql_real_connect(conn, hostname, username, password, database_name, 0, NULL, 0) == NULL)
+        {
+            fprintf(stderr, "mysql_real_connect() failed\n");
+            mysql_close(conn);
+            return 1;
+        }
+        else
+        {
+            printf("Database connection successfully..!\n");
+        }
+    }
+    else if (selection == 2)
+    {
+        // DBA handling class
+        // DBA();
+   
+    }
+    else
+    {
+
+        printf("Please enter valid input values.\n e.g 1 or 2\n");
+    }
+
+    return 0;
+}
+
+int available_stock()
 {
     char query[256];
     printf("******************Available Suppliers and items****************** \n ");
 
-    snprintf(query, sizeof(query), "SELECT * FROM `suppliers` ");
+    snprintf(query, sizeof(query), "SELECT * FROM `stock` ");
 
     // Execute the query
     if (mysql_query(conn, query))
@@ -129,6 +177,9 @@ int loading_to_vehicle()
         printf("\n");
     }
 }
+
+
+
 int DBA()
 {
     int choice;
@@ -137,7 +188,7 @@ int DBA()
     printf("please enter your choice\n\n");
     printf(" [1] Item section\n");
     printf(" [2] Vehicles section\n");
-    printf(" [3] Supplier section\n");
+    printf(" [3] Manage Stocks\n");
     printf(" [4] Reporting section\n");
     scanf("%d", &choice);
     if (!(mysql_real_connect(conn, hostname, username, password, database_name, 0, NULL, 0) == NULL))
@@ -150,13 +201,13 @@ int DBA()
             printf("**Item section**\n Please select your choice\n");
             printf(" [1] Add Item\n");
             printf(" [2] Search Item\n");
-            printf(" [3] Edit Item\n");
+            // printf(" [3] Edit Item\n");
             printf(" [4] Delete Item\n");
             scanf("%d", &choice_item);
             if (choice_item == 1)
             {
-                // show available suppliers
-                available_suppliers();
+                // show available stock
+                available_stock();
 
                 char query[256];
 
@@ -164,7 +215,7 @@ int DBA()
                 printf("Please enter supplier id from supplier table: ");
                 scanf("%49s", sup_id); // Limit input to 49 characters to avoid buffer overflow
 
-                snprintf(query, sizeof(query), "SELECT COUNT(*) FROM suppliers WHERE id = '%s'", sup_id);
+                snprintf(query, sizeof(query), "SELECT COUNT(*) FROM stock WHERE id = '%s'", sup_id);
 
                 if (mysql_query(conn, query))
                 {
@@ -241,8 +292,8 @@ int DBA()
                     // sprintf(query, "INSERT INTO item (item_name, qty, unit_price) VALUES ('%s', '%d', '%lf')", item_name, qty, unit_price);
                     sprintf(query, "INSERT INTO item (supplier_id) VALUES ('%s')", sup_id);
 
-                    // UPDATE item JOIN suppliers ON item.supplier_id = suppliers.id SET item.item_name = suppliers.item_name, item.qty = suppliers.qty,
-                    //  item.unit_price = suppliers.unit_price WHERE suppliers.id = 10;
+                    // UPDATE item JOIN stock ON item.supplier_id = stock.id SET item.item_name = stock.item_name, item.qty = stock.qty,
+                    //  item.unit_price = stock.unit_price WHERE stock.id = 10;
 
                     // // Executing SQL query
                     if (mysql_query(conn, query) != 0)
@@ -253,9 +304,12 @@ int DBA()
                     else
                     {
                         printf("Item saved successfully..\n");
+                       
+                        
                     }
 
-                    sprintf(query, "UPDATE item JOIN suppliers ON item.supplier_id = suppliers.id SET item.item_name = suppliers.item_name, item.qty = suppliers.qty,item.unit_price = suppliers.unit_price WHERE suppliers.id = '%s'", sup_id);
+                    // sprintf(query, "UPDATE item JOIN stock ON item.supplier_id = stock.id SET item.item_name = stock.item_name,item.item_name = stock. item.qty = stock.qty,item.unit_price = stock.unit_price WHERE stock.id = '%s'", sup_id);
+                    sprintf(query, "UPDATE item JOIN stock ON item.supplier_id = stock.id SET item.item_name = stock.item_name,item.item_name = stock.item_name, item.qty = stock.qty,item.unit_price = stock.unit_price WHERE stock.id = '%s'", sup_id);
                     if (mysql_query(conn, query) != 0)
                     {
                         printf("Item save failed..\n");
@@ -268,7 +322,7 @@ int DBA()
                 }
                 else
                 {
-                    printf("WARNING!!\nSupplier id is not matching with our records.\nPlease check suppliers and try again..!\n");
+                    printf("WARNING!!\nSupplier id is not matching with our records.\nPlease check stock and try again..!\n");
                 }
             }
             else if (choice_item == 2)
@@ -408,6 +462,7 @@ int DBA()
                 int qty;
                 double unit_price;
                 double total_price;
+                available_items();
                 // Prompt user for item id to update
                 printf("Please enter item id: ");
                 scanf("%d", &id);
@@ -426,9 +481,13 @@ int DBA()
                 total_price = qty * unit_price;
 
                 // Format the update query
+                // snprintf(query, sizeof(query),
+                //          "UPDATE `item` SET item_name='%s', qty=%d, unit_price=%.2f WHERE id=%d",
+                //          item_name, qty, unit_price, id);
+
                 snprintf(query, sizeof(query),
-                         "UPDATE `item` SET item_name='%s', qty=%d, unit_price=%.2f WHERE id=%d",
-                         item_name, qty, unit_price, id);
+                         "UPDATE `item` SET item_name='%s', qty=%d WHERE id=%d",
+                         item_name, qty, id);
 
                 // Execute the query
                 if (mysql_query(conn, query))
@@ -444,6 +503,7 @@ int DBA()
             {
                 int id;
                 char query[256];
+                available_items();
                 printf("Please enter id of item\n");
                 scanf("%d", &id);
                 snprintf(query, sizeof(query), "Delete from `item` where id ='%d'", id);
@@ -791,7 +851,7 @@ int DBA()
                 printf("**Item unload section**\n");
 
                 loading_to_vehicle();
-                printf("Please enter load id:\n");
+                printf("Please enter load id:");
                 scanf("%d", &load_id);
                 snprintf(query, sizeof(query), "SELECT COUNT(*) FROM loading WHERE id = '%d'", load_id);
                 if (mysql_query(conn, query))
@@ -948,7 +1008,7 @@ int DBA()
 
             // sprintf(query, "select reg_no from vehicles where reg_no ='%%%s%%' ",reg_no);
 
-            sprintf(query, "INSERT INTO suppliers (item_name, supplier_name,qty,unit_price) VALUES ('%s', '%s' , '%.2f' , '%.2f')", itemname, supplier_name, qty, unit_price);
+            sprintf(query, "INSERT INTO stock (item_name, supplier_name,qty,unit_price) VALUES ('%s', '%s' , '%.2f' , '%.2f')", itemname, supplier_name, qty, unit_price);
 
             // Executing SQL query
             if (mysql_query(conn, query) != 0)
@@ -958,34 +1018,88 @@ int DBA()
             }
             else
             {
-                printf("Supplier saved successfully..\n");
+                printf("New Stock get successfully..\n");
             }
         }
         else if (choice == 4)
         {
             printf("**Reporting section**\n");
-            
-
-
-
-            int load_report_current_date;
-            int year_end_process;
-            int purchase_report;
-            int sales_report;
-
-           
-
-
-            //purchase_report start
-            int daily_purchase_report;
-            int monthly_purchase_report;
-            int annual_purchase_report;
-            //purchase_report end
+            int select_report_type;
+            char query[256];
+            // int load_report_current_date;
+            // int year_end_process;
+            // int purchase_report;
+            // int sales_report;
+            // purchase_report start
+            // int daily_purchase_report;
+            // int monthly_purchase_report;
+            // int annual_purchase_report;
+            // purchase_report end
             //***********
-            //sales_report
-            int daily_sales_report;
-            int monthly_sales_report;
-            int annual_sales_report;
+            // sales_report
+            // int daily_sales_report;
+            // int monthly_sales_report;
+            // int annual_sales_report;
+            printf("[1] Load report by current date\n");
+            printf("[2] Year end process\n");
+            printf("[3] Purchase report\n");
+            printf("[4] Sales report\n");
+            scanf("%d", &select_report_type);
+
+            if (select_report_type == 1)
+            {
+
+                printf("******************Today Load Reports****************** \n ");
+                // SET @MY_VAR = CURRENT_DATE();
+
+                snprintf(query, sizeof(query), "SELECT * FROM `loading` WHERE load_time LIKE CONCAT('%%', CURRENT_DATE(), '%%'); ");
+
+                // Execute the query
+                if (mysql_query(conn, query))
+                {
+                    fprintf(stderr, "%s\n", mysql_error(conn));
+                    // exit(1);
+                }
+
+                // Store the result
+                res = mysql_store_result(conn);
+
+                // Get the number of fields
+                int num_fields = mysql_num_fields(res);
+
+                // Fetch and print column headers
+                MYSQL_FIELD *fields = mysql_fetch_fields(res);
+                for (int i = 0; i < num_fields; i++)
+                {
+                    printf("%-12s|", fields[i].name);
+                }
+                printf("\n");
+
+                // Fetch and print the result rows
+                while ((row = mysql_fetch_row(res)))
+                {
+                    for (int i = 0; i < num_fields; i++)
+                    {
+                        printf("%-12s| ", row[i] ? row[i] : "NULL");
+                    }
+                    printf("\n");
+                }
+            }
+            else if (select_report_type == 2)
+            {
+            }
+            else if (select_report_type == 3)
+            {
+                printf("Daily purchase report\n");
+                printf("Monthly purchase report\n");
+                printf("Annual purchase report\n");
+            }
+            else if (select_report_type == 4)
+            {
+                printf("Daily sales report\n");
+                printf("Monthly sales report\n");
+                printf("Annual sales report\n");
+            }
         }
         else
         {
