@@ -14,7 +14,8 @@ int qty;
 double unit_price;
 double total_price;
 
-int main_menu(){
+int main_menu()
+{
     conn = mysql_init(NULL);
     int selection;
     printf("!!!!!!!!!!!!!! ***** Welcome to XYZ Distributors ***** !!!!!!!!!!!!!!\n");
@@ -51,7 +52,6 @@ int main_menu(){
     {
         // DBA handling class
         // DBA();
-   
     }
     else
     {
@@ -178,8 +178,6 @@ int loading_to_vehicle()
     }
 }
 
-
-
 int DBA()
 {
     int choice;
@@ -290,9 +288,9 @@ int DBA()
                     // char query[256];
                     // fgets(item_name, sizeof(item_name), stdin);
                     // sprintf(query, "INSERT INTO item (item_name, qty, unit_price) VALUES ('%s', '%d', '%lf')", item_name, qty, unit_price);
-                    sprintf(query, "INSERT INTO item (supplier_id) VALUES ('%s')", sup_id);
+                    sprintf(query, "INSERT INTO item (stock_id) VALUES ('%s')", sup_id);
 
-                    // UPDATE item JOIN stock ON item.supplier_id = stock.id SET item.item_name = stock.item_name, item.qty = stock.qty,
+                    // UPDATE item JOIN stock ON item.stock_id = stock.id SET item.item_name = stock.item_name, item.qty = stock.qty,
                     //  item.unit_price = stock.unit_price WHERE stock.id = 10;
 
                     // // Executing SQL query
@@ -304,12 +302,10 @@ int DBA()
                     else
                     {
                         printf("Item saved successfully..\n");
-                       
-                        
                     }
 
-                    // sprintf(query, "UPDATE item JOIN stock ON item.supplier_id = stock.id SET item.item_name = stock.item_name,item.item_name = stock. item.qty = stock.qty,item.unit_price = stock.unit_price WHERE stock.id = '%s'", sup_id);
-                    sprintf(query, "UPDATE item JOIN stock ON item.supplier_id = stock.id SET item.item_name = stock.item_name,item.item_name = stock.item_name, item.qty = stock.qty,item.unit_price = stock.unit_price WHERE stock.id = '%s'", sup_id);
+                    // sprintf(query, "UPDATE item JOIN stock ON item.stock_id = stock.id SET item.item_name = stock.item_name,item.item_name = stock. item.qty = stock.qty,item.unit_price = stock.unit_price WHERE stock.id = '%s'", sup_id);
+                    sprintf(query, "UPDATE item JOIN stock ON item.stock_id = stock.id SET item.item_name = stock.item_name,item.item_name = stock.item_name, item.qty = stock.qty,item.unit_price = stock.unit_price WHERE stock.id = '%s'", sup_id);
                     if (mysql_query(conn, query) != 0)
                     {
                         printf("Item save failed..\n");
@@ -962,7 +958,7 @@ int DBA()
                                     // printf("Items loading to vehicle successfully..\n");
                                 }
                                 // current_timestamp
-                                sprintf(query, "UPDATE loading SET qty = qty - %lf , unload_time = current_timestamp WHERE id = %d AND item_id=%d", qty, load_id, item_id);
+                                sprintf(query, "UPDATE loading SET qty = qty - %lf , unload_time = current_timestamp , day_type='evening' WHERE id = %d AND item_id=%d", qty, load_id, item_id);
 
                                 if (mysql_query(conn, query) != 0)
                                 {
@@ -1090,13 +1086,143 @@ int DBA()
             }
             else if (select_report_type == 3)
             {
-                printf("Daily purchase report\n");
-                printf("Monthly purchase report\n");
-                printf("Annual purchase report\n");
+                int purchase_report_type;
+                char query[256];
+                char date[100];
+                printf(" [1] Daily purchase report\n");
+                printf(" [2] Monthly purchase report\n");
+                printf(" [3] Annual purchase report\n");
+                scanf("%d", &purchase_report_type);
+
+                if (purchase_report_type == 1)
+                {
+                    printf("Date format YYYY-MM-DD\n");
+                    printf("Please enter date: ");
+                    scanf("%99s", &date);
+                    snprintf(query, sizeof(query), "SELECT item_name,supplier_name,qty,unit_price , (qty * unit_price) AS total_cost from stock WHERE purchase_date = '%s'", date);
+                    // Execute the query
+                    if (mysql_query(conn, query))
+                    {
+                        fprintf(stderr, "%s\n", mysql_error(conn));
+                        // exit(1);
+                    }
+
+                    // Store the result
+                    res = mysql_store_result(conn);
+
+                    // Get the number of fields
+                    int num_fields = mysql_num_fields(res);
+
+                    // Fetch and print column headers
+                    MYSQL_FIELD *fields = mysql_fetch_fields(res);
+                    for (int i = 0; i < num_fields; i++)
+                    {
+                        printf("%-12s| ", fields[i].name);
+                    }
+                    printf("\n");
+
+                    // Fetch and print the result rows
+                    while ((row = mysql_fetch_row(res)))
+                    {
+                        for (int i = 0; i < num_fields; i++)
+                        {
+                            printf("%-12s| ", row[i] ? row[i] : "NULL");
+                        }
+                        printf("\n");
+                    }
+                }
+                else if (purchase_report_type == 2)
+                {
+
+                    printf("Date format YYYY-MM\n");
+                    printf("!!Note - Enter only year and month\n");
+                    printf("Please enter year & date: ");
+                    scanf("%99s", &date);
+                   
+
+                    snprintf(query, sizeof(query), "SELECT item_name,supplier_name,qty,unit_price , (qty * unit_price) AS total_cost from stock WHERE purchase_date LIKE '%s%%'", date);
+                    // Execute the query
+                    if (mysql_query(conn, query))
+                    {
+                        fprintf(stderr, "%s\n", mysql_error(conn));
+                        // exit(1);
+                    }
+
+                    // Store the result
+                    res = mysql_store_result(conn);
+
+                    // Get the number of fields
+                    int num_fields = mysql_num_fields(res);
+
+                    // Fetch and print column headers
+                    MYSQL_FIELD *fields = mysql_fetch_fields(res);
+                    for (int i = 0; i < num_fields; i++)
+                    {
+                        printf("%-12s| ", fields[i].name);
+                    }
+                    printf("\n");
+
+                    // Fetch and print the result rows
+                    while ((row = mysql_fetch_row(res)))
+                    {
+                        for (int i = 0; i < num_fields; i++)
+                        {
+                            printf("%-12s| ", row[i] ? row[i] : "NULL");
+                        }
+                        printf("\n");
+                    }
+                }
+                else if (purchase_report_type == 3)
+                {
+                    printf("Date format YYYY\n");
+                    printf("!!Note - Enter only year\n");
+                    printf("Please enter year: ");
+                    scanf("%99s", &date);
+                    snprintf(query, sizeof(query), "SELECT item_name,supplier_name,qty,unit_price , (qty * unit_price) AS total_cost from stock WHERE purchase_date LIKE '%%%s%%'", date);
+                    // Execute the query
+                    if (mysql_query(conn, query))
+                    {
+                        fprintf(stderr, "%s\n", mysql_error(conn));
+                        // exit(1);
+                    }
+
+                    // Store the result
+                    res = mysql_store_result(conn);
+
+                    // Get the number of fields
+                    int num_fields = mysql_num_fields(res);
+
+                    // Fetch and print column headers
+                    MYSQL_FIELD *fields = mysql_fetch_fields(res);
+                    for (int i = 0; i < num_fields; i++)
+                    {
+                        printf("%-12s| ", fields[i].name);
+                    }
+                    printf("\n");
+
+                    // Fetch and print the result rows
+                    while ((row = mysql_fetch_row(res)))
+                    {
+                        for (int i = 0; i < num_fields; i++)
+                        {
+                            printf("%-12s| ", row[i] ? row[i] : "NULL");
+                        }
+                        printf("\n");
+                    }
+
+
+
+
+                }
+                else
+                {
+                    printf("Please enter valid number");
+                }
             }
             else if (select_report_type == 4)
             {
                 printf("Daily sales report\n");
+                // SELECT item.item_name , (stock.qty - item.qty) AS sell_item FROM item INNER JOIN stock ON stock.id = item.stock_id; 
                 printf("Monthly sales report\n");
                 printf("Annual sales report\n");
             }
