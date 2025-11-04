@@ -5,8 +5,8 @@ MYSQL *conn = NULL;
 MYSQL_RES *res = NULL;
 MYSQL_ROW row = NULL;
 char *hostname = "localhost";
-char *username = "root";
-char *password = "g*71$";
+char *username = "admin";
+char *password = "admin";
 char *database_name = "test_app";
 
 char item_name[200];
@@ -1301,3 +1301,4 @@ int main()
 */
     return 0;
 }
+
